@@ -1,38 +1,54 @@
 import requests
-import allure
-from config import BASE_URL, TEST_DATA
-from selenium import webdriver
+# import allure
 
-class Test_API:
+     #Поиск фильма по ID:
 
-    def __init__(self, driver: webdriver) -> None:
-        self.__driver = driver
+# @allure.feature('Поиск фильма')
+# @allure.story('Поиск фильма по ID')
+def test_search_movie_by_id():
+    movie_id = '75209b22'
+    response = requests.get(f'https://api.kinopoisk.ru/v1.3/movie/{movie_id}')
+    if response.status_code == 404:
+        print("Фильм с таким ID не найден")
+    else:
+     assert response.status_code == 200
+     assert response.json()['id'] == movie_id
+    
+     #Поиск фильма по названию:
+def test_search_movie_by_title():
+    title = 'Интерстеллар'
+    response = requests.get(f'https://api.kinopoisk.ru/v1.3/movie/search', params={'query': title})
+    if response.status_code == 404:
+        print("Фильм с таким названием не найден")
+    else:
+        assert response.status_code == 200
+        assert any(movie['title'] == title for movie in response.json()['movies'])
 
-    @allure.step("Поиск фильма по ID")
-    def testsearchfilmbyid(self):
-        response = requests.get(f"{BASE_URL}/api/films/{TEST_DATA:'film''id'}")
-        assert response.statuscode == 200
-        assert 'name' in response.json()
+     #Поиск по фильтрам:
+def test_search_movie_by_filters():
+    filters = {'year': 2020, 'genre': 'драма'}
+    response = requests.get(f'https://api.kinopoisk.ru/v1.3/movie/search', params=filters)
+    if response.status_code == 404:
+        print("Фильмы с такими фильтрами не найдены")
+    else:
+        assert response.status_code == 200
+        assert all(movie['year'] == 2020 and 'драма' in movie['genres'] for movie in response.json()['movies'])
 
-    @allure.step("Поиск фильма по названию")
-    def testsearchfilmbyname(self):
-        response = requests.get(f"{BASE_URL}/api/films", params={"name": TEST_DATA['film']['name']})
-        assert response.statuscode == 200
-        assert len(response.json()) > 0
-
-    @allure.step("Поиск по фильтрам")
-    def testsearchbyfilters(self):
-        response = requests.get(f"{BASE_URL}/api/films", params=TEST_DATA['film']['filters'])
-        assert response.statuscode == 200
-        assert len(response.json()) > 0
-
-    @allure.step("Поиск актера по ID")
-    def testsearchactorbyid(self):
-        response = requests.get(f"{BASE_URL}/api/actors/{TEST_DATA :'film''id'}")
-        assert response.statuscode == 200
-        assert 'name' in response.json()
-
-    @allure.step("Некорректный поиск по фильтрам")
-    def testinvalidfiltersearch(self):
-        response = requests.get(f"{BASE_URL}/api/films", params={"genre": "неизвестный жанр"})
-        assert response.statuscode == 404
+     #Поиск актрисы (актера) по ID:
+def test_search_actor_by_id():
+    actor_id = 'f22e0093'  
+    response = requests.get(f'https://api.kinopoisk.ru/v1.3/person/{actor_id}')
+    if response.status_code == 404:
+        print("Актер с таким ID не найден")
+    else:
+        assert response.status_code == 200
+        assert response.json()['id'] == actor_id
+    
+     #Некорректный поиск по фильтрам:
+def test_invalid_search_by_filters():
+    filters = {'year': 'invalid', 'genre': 'unknown'}
+    response = requests.get(f'https://api.kinopoisk.ru/v1.3/movie/search', params=filters)
+    if response.status_code == 404:
+        print("Фильмы с такими фильтрами не найдены")
+    else:
+        assert response.status_code == 400 
